@@ -9,10 +9,10 @@ There are 4 LEDs. From left to right:
 3. Yellow 2
 4. Yellow 3
 
-## Usage
+## Select IP block
 Pushing the button for 1 second lights up the first LED. Each extra second lights up the next LED.<br>
 Releasing the button determines the IP-block to determine.
-A block has always 3 numbers (e.g. 001, 192, 010)
+A block always has 3 numbers (e.g. 001, 192, 010)
 
 1 sec: XXX.xxx.xxx.xxx<br>
 2 sec: xxx.XXX.xxx.xxx<br>
@@ -21,6 +21,7 @@ A block has always 3 numbers (e.g. 001, 192, 010)
 
 6 sec: sets 'renew the IP address'
 
+## Select which number to determine within the selected IP-block
 When a block is selected, the next step is to determine the number.<br>
 This is done by pushing the button shortly (less than 1 second).<br>
 The yellow LEDs are the counters. When the counter reaches the number, the blue LED will light up.<br>
@@ -30,7 +31,7 @@ Pressing the button shortly after the third number will bring you back to the fi
 
 An exception is made for the number 0 (zero). A zero is shown as the blue LED and the last yellow LED.
 
-Example:<br>
+### Example:
 196.168.4.1   ->  196.168.004.001
 
 - is off<br>
