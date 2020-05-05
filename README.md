@@ -1,6 +1,8 @@
 # DecodeIP
 Determine the given IP number of a device using 4 LEDs and a button
 
+# Under construction, not working yet
+
 An IP has 4 block of each max 3 numbers
 
 There are 4 LEDs. From left to right:
