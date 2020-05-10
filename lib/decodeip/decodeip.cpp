@@ -23,7 +23,9 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
        acknowledge pin should have a value when the last result-row is given
     */
     Serial.print("start flashResult met block: ");
-    Serial.println(block);
+    Serial.print(block);
+    Serial.print(" en IP-positie: ");
+    Serial.println(numberPosition);
     if (block > 0) {
       block--;   // index starts at 0
     }
@@ -176,15 +178,14 @@ void DecodeIP::process(String ip4)
     }
 }
 
-void DecodeIP::loop(String ip4, uint8_t pressCount, uint8_t maxShowTime, uint32_t buttonPressTime)
+void DecodeIP::loop(String ip4, uint32_t buttonPressTime)
 {
-  this->pressCount = pressCount;
-  this->maxShowTime = maxShowTime;
   this->buttonPressTime = buttonPressTime;
 
   if (this->ip4 != ip4) {
     // refreshed ip
     this->ip4 = ip4;
+    this->pressCount = 0;
     this->process(this->ip4);
   }
   if (digitalRead(this->pinButton) == HIGH)
@@ -199,15 +200,22 @@ void DecodeIP::loop(String ip4, uint8_t pressCount, uint8_t maxShowTime, uint32_
 
 void DecodeIP::actOnHigh()
 {
-  this->savedBlock = int(this->buttonPressTime / 1000);
-
-  Serial.print("savedBlock: ");
-  Serial.println(this->savedBlock);
-  Serial.print("pressCount: ");
-  Serial.println(this->pressCount);
+  uint8_t block = int(this->buttonPressTime / 1000);
+  this->allowShowResult = true;
+  if (block > 0)
+  {
+    this->savedBlock = block;
+    this->allowShowResult = false;
+  }
+  //Serial.print("savedBlock: ");
+  //Serial.println(this->savedBlock);
+  //Serial.print("pressCount: ");
+  //Serial.println(this->pressCount);
   if (this->savedBlock == 1)
   {
     digitalWrite(this->pin[3], HIGH);
+    this->pressCount = 0; 
+    this->maxShowTime = 0;
   }
   if (this->savedBlock == 2)
   {
@@ -250,7 +258,13 @@ void DecodeIP::actOnLow()
     {
       this->flashBlock(this->savedBlock);  // show which block is being read
     }
-
+  }
+  if (this->savedBlock == 0)
+  {
+    this->pressCount++;
+  }
+  if (this->allowShowResult == true)
+  {
     if (this->maxShowTime < this->MAXSHOW)
     {
       if (this->pressCount > 3)
@@ -276,8 +290,6 @@ void DecodeIP::actOnLow()
   }
 }
 
-
-
 void DecodeIP::flashBlock(uint8_t block)
 {
   unsigned long wait = 100;
@@ -296,7 +308,7 @@ void DecodeIP::flashBlock(uint8_t block)
   digitalWrite(this->pin[1], LOW);
   digitalWrite(this->pin[2], LOW);
 
-  //this->delayInMillis(wait);
+  this->delayInMillis(wait);
 }
 
 

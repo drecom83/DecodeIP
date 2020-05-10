@@ -14,11 +14,6 @@ const uint8_t IP_PIN2 = D1;
 const uint8_t IP_BUTTON = D7;
 String ip4 = "192.168.004.001";
 bool resetIP = false;
-bool buttonInterruptFlag = false;
-
-/* paramer for showBlock */
-const uint8_t MAXSHOW = 10;
-volatile  uint8_t maxShowTime = MAXSHOW;
 
 /* count the number of button-presses within a choosen IP-block */
 volatile uint8_t pressCount = 0;
@@ -52,7 +47,6 @@ void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
   buttonInterruptOff();  // to prevent exception
 
   delayInMillis(10);      // prevent bounce
-  buttonInterruptFlag = true;
   
   digitalWrite(IP_ACK, LOW);
   digitalWrite(IP_PIN0, LOW);
@@ -61,15 +55,13 @@ void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
 
   if (digitalRead(IP_BUTTON) == HIGH)
   {
-    // counter within one of the four IP-blocks
-    pressCount++;
-    maxShowTime = 0;                // counter for repeating flashresult, until this-MAXSHOW
     pressTime = millis();           // start of pressing the button
+    buttonPressTime = millis() - pressTime;  // get buttonPressTime in main loop too
   }
-  else
-  {
-    buttonPressTime = millis() - pressTime;
-  }
+  //else
+  //{
+    //buttonPressTime = millis() - pressTime;
+  //}
   buttonInterruptOn();  // to prevent exception
 }
 
@@ -111,18 +103,14 @@ void setup()
 
 void loop()
 {
+  buttonPressTime = millis() - pressTime;
 
-  if (buttonInterruptFlag == true)
+  decodeIP->loop(ip4, buttonPressTime);
+
+  resetIP = decodeIP->getRenewValue();
+  if (resetIP == true)
   {
-    buttonInterruptOff();
-    decodeIP->loop(ip4, pressCount, maxShowTime, buttonPressTime);
-    buttonInterruptFlag = false;
-    resetIP = decodeIP->getRenewValue();
-    buttonInterruptOn();
-    if (resetIP == true)
-    {
-      Serial.println("reset should happen here");
-      resetIP = false;
-    }
+    Serial.println("reset should happen here");
+    resetIP = false;
   }
 }

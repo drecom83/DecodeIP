@@ -11,16 +11,17 @@ class DecodeIP
 private:
     /* paramer for showBlock */
     const uint8_t MAXSHOW = 10;
-    volatile  uint8_t maxShowTime = MAXSHOW;
+    uint8_t maxShowTime = MAXSHOW;
 
     /* count the number of button-presses within a choosen IP-block */
-    volatile uint8_t pressCount = 0;
+    uint8_t pressCount = 0;
 
 
     /* remember which block in turn */
     uint8_t savedBlock = 0;
 
-    
+    /* if a block is selected then allowShowResult = true */
+    bool allowShowResult = false;
 
     /* 
     pin[0], pin[1], pin[2] are result pins
@@ -95,7 +96,7 @@ public:
 
     /* loop of this class */
     /* if true the device should reset to Access Point with default IP address */
-    void loop(String ip4, uint8_t pressCount, uint8_t maxShowTime, uint32_t buttonPressTime);
+    void loop(String ip4, uint32_t buttonPressTime);
 
     /* number of pins flashing/on to show which block is used */
     void flashBlock(uint8_t block);
