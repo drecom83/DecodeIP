@@ -9,8 +9,18 @@
 class DecodeIP
 {
 private:
+    /* paramer for showBlock */
+    const uint8_t MAXSHOW = 10;
+    volatile  uint8_t maxShowTime = MAXSHOW;
+
+    /* count the number of button-presses within a choosen IP-block */
+    volatile uint8_t pressCount = 0;
+
+
     /* remember which block in turn */
     uint8_t savedBlock = 0;
+
+    
 
     /* 
     pin[0], pin[1], pin[2] are result pins
@@ -20,6 +30,9 @@ private:
 
     /* button to take action on */
     uint8_t pinButton;
+
+    /* time elapsed since buttonPress */
+    uint32_t buttonPressTime;
 
     /* after 6 seconds a renew is true */
     bool renewValue = false; 
@@ -82,12 +95,12 @@ public:
 
     /* loop of this class */
     /* if true the device should reset to Access Point with default IP address */
-    bool loop(String ip4);
+    void loop(String ip4, uint8_t pressCount, uint8_t maxShowTime, uint32_t buttonPressTime);
 
     /* number of pins flashing/on to show which block is used */
     void flashBlock(uint8_t block);
 
-    /* action on button-input CHANGE (to HIGH or to LOW) */
-    void actOnInterrupt(uint8_t pinButton);
+     /* give renewValue */
+    bool getRenewValue();
 };
 #endif

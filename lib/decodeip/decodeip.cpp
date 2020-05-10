@@ -179,24 +179,37 @@ void DecodeIP::process(String ip4)
     }
 }
 
-void DecodeIP::actOnHigh()
+void DecodeIP::loop(String ip4, uint8_t pressCount, uint8_t maxShowTime, uint32_t buttonPressTime)
 {
-  if (this->buttonPressTime < 6500) {
-    this->buttonPressTime = millis() - this->pressTime;
+  this->pressCount = pressCount;
+  this->maxShowTime = maxShowTime;
+  this->buttonPressTime = buttonPressTime;
+
+  if (this->ip4 != ip4) {
+    // refreshed ip
+    this->ip4 = ip4;
+    this->process(this->ip4);
+  }
+  if (digitalRead(this->pinButton) == HIGH)
+  {
+    this->actOnHigh();
   }
   else
   {
-    this->buttonPressTime = 8000;
+    this->actOnLow();
   }
-  
+
+}
+void DecodeIP::actOnHigh()
+{
   Serial.println(this->savedBlock);
   this->savedBlock = int(this->buttonPressTime / 1000);
-  this->pressCount[this->savedBlock] = 0;   // this->savedBlock max == 7
+  this->pressCount = 0;   // this->savedBlock max == 7
 
   Serial.print("c: ");
   Serial.println(this->savedBlock);
   Serial.print("d: ");
-  Serial.println(this->pressCount[this->savedBlock]);
+  Serial.println(this->pressCount);
   if (this->savedBlock == 1)
   {
     digitalWrite(this->pin[3], HIGH);
@@ -245,60 +258,35 @@ void DecodeIP::actOnLow()
 {
   if ((this->savedBlock >= 1) && (this->savedBlock <= 4))
   {
-    if (this->renewCandidate == false)  // fresh renewCandidate
-    {
-      for (int i = 0; i < 12; i++)
-      {
-        this->pressCount[i] = 0;
-      }
-      this->renewCandidate = true;
-    }
+    this->pressCount = 0;
+  }
 
 
-    if (this->pressCount[this->savedBlock] == 0)
+  if (this->pressCount == 0)
+  {
+    this->flashBlock(this->savedBlock);  // show which block is being read
+  }
+
+  if (this->maxShowTime < this->MAXSHOW)
+  {
+    if (this->pressCount > 3)
     {
-      this->flashBlock(this->savedBlock);  // show which block is being read
-    }
-    if (this->renewCandidate == true)
-    {
-      if (this->maxShowTime < this->MAXSHOW)
+      this->pressCount = 1;
+      for (uint8_t i = 0; i < 3; i++)
       {
-        if (this->pressCount[this->savedBlock] > 3)
-        {
-          this->pressCount[this->savedBlock] = 1;
-          for (uint8_t i = 0; i < 3; i++)
-          {
-            //this->flashPin(this->pin[3], 100);
-            //this->flashPin(this->pin[0], 100);
-            //this->flashPin(this->pin[1], 100);
-            //this->flashPin(this->pin[2], 100);
-          }
-          this->maxShowTime = this->MAXSHOW;  // soft break
-        }
-        this->flashResult(this->savedBlock, this->pressCount[this->savedBlock]);
-        this->maxShowTime++;
+        //this->flashPin(this->pin[3], 100);
+        //this->flashPin(this->pin[0], 100);
+        //this->flashPin(this->pin[1], 100);
+        //this->flashPin(this->pin[2], 100);
       }
+      this->maxShowTime = this->MAXSHOW;  // soft break
     }
+    this->flashResult(this->savedBlock, this->pressCount);
+    this->maxShowTime++;
   }
 }
 
-bool DecodeIP::loop(String ip4)
-{
-  if (this->ip4 != ip4) {
-    // refreshed ip
-    this->ip4 = ip4;
-    this->process(this->ip4);
-  }
-  if (digitalRead(this->pinButton) == HIGH)
-  {
-    this->actOnHigh();
-  }
-  else
-  {
-    this->actOnLow();
-  }
-  return this->renewValue;
-}
+
 
 void DecodeIP::flashBlock(uint8_t block)
 {
@@ -343,4 +331,9 @@ void DecodeIP::delayInMillis(uint8_t ms) {
     delayMicroseconds(250);   // delay in the loop could cause an exception (9) when using interrupts
     delayMicroseconds(250);   // delay in the loop could cause an exception (9) when using interrupts
   }
+}
+
+bool DecodeIP::getRenewValue()
+{
+  return this->renewValue;
 }

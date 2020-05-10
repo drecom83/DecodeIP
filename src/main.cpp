@@ -14,6 +14,8 @@ const uint8_t IP_PIN2 = D1;
 const uint8_t IP_BUTTON = D7;
 String ip4 = "192.168.004.001";
 bool resetIP = false;
+bool buttonInterruptFlag = false;
+
 /* paramer for showBlock */
 const uint8_t MAXSHOW = 10;
 volatile  uint8_t maxShowTime = MAXSHOW;
@@ -21,7 +23,7 @@ volatile  uint8_t maxShowTime = MAXSHOW;
 /* count the number of button-presses within a choosen IP-block */
 volatile uint8_t pressCount = 0;
 
-/* holds the time in millis between button-press and button-releas */
+/* holds the time in millis between button-press and button-release */
 uint32_t buttonPressTime = 0;
 
 /* time that the button was pressed, in milis since esp8266 was powered */
@@ -50,7 +52,7 @@ void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
   buttonInterruptOff();  // to prevent exception
 
   delayInMillis(10);      // prevent bounce
-
+  buttonInterruptFlag = true;
   
   digitalWrite(IP_ACK, LOW);
   digitalWrite(IP_PIN0, LOW);
@@ -61,7 +63,7 @@ void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
   {
     // counter within one of the four IP-blocks
     pressCount++;
-    maxShowTime = 0;                // counter for repeating flashresult, unil this-MAXSHOW
+    maxShowTime = 0;                // counter for repeating flashresult, until this-MAXSHOW
     pressTime = millis();           // start of pressing the button
   }
   else
@@ -109,22 +111,19 @@ void setup()
 
 void loop()
 {
+
   if (buttonInterruptFlag == true)
   {
     buttonInterruptOff();
-    
+    decodeIP->loop(ip4, pressCount, maxShowTime ,buttonPressTime);
     buttonInterruptFlag = false;
-    decodeIP->actOnInterrupt(IP_BUTTON);
+    resetIP = decodeIP->getRenewValue();
+    buttonInterruptOn();
+    if (resetIP == true)
+    {
+      Serial.println("reset should happen here");
+    }
   }
-  resetIP = decodeIP->loop(ip4);
-  buttonInterruptOn();
-  if (resetIP == true)
-  {
-    Serial.println("reset should happen here");
-    
-
-  }
-
 
   Serial.print(">");
   Serial.print(resetIP);
