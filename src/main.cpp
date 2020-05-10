@@ -115,19 +115,14 @@ void loop()
   if (buttonInterruptFlag == true)
   {
     buttonInterruptOff();
-    decodeIP->loop(ip4, pressCount, maxShowTime ,buttonPressTime);
+    decodeIP->loop(ip4, pressCount, maxShowTime, buttonPressTime);
     buttonInterruptFlag = false;
     resetIP = decodeIP->getRenewValue();
     buttonInterruptOn();
     if (resetIP == true)
     {
       Serial.println("reset should happen here");
+      resetIP = false;
     }
   }
-
-  Serial.print(">");
-  Serial.print(resetIP);
-  delay(500);
-  
-
 }

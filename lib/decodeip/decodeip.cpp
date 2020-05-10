@@ -22,12 +22,12 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
 
        acknowledge pin should have a value when the last result-row is given
     */
-    Serial.println("start flashResult");
+    Serial.print("start flashResult met block: ");
     Serial.println(block);
     if (block > 0) {
       block--;   // index starts at 0
     }
-    if (block <= 3)   // four blocks (0,1,2,3)
+    if (block < 4)   // four blocks (0,1,2,3)
     {
       // show which block, first attention by flash them all
 
@@ -157,9 +157,6 @@ void DecodeIP::process(String ip4)
     String block = "";
     uint8_t blockCount = 0;
     bool stop = false;
-    Serial.print("ip4 lengte: ");
-    Serial.println(ip4);
-    Serial.println(ip4.length());
     for (uint8_t i = 0; i <= ip4.length(); i++) {
         if ((ip4[i] == '.') || (i == ip4.length())) {
             stop = true;
@@ -198,17 +195,15 @@ void DecodeIP::loop(String ip4, uint8_t pressCount, uint8_t maxShowTime, uint32_
   {
     this->actOnLow();
   }
-
 }
+
 void DecodeIP::actOnHigh()
 {
-  Serial.println(this->savedBlock);
   this->savedBlock = int(this->buttonPressTime / 1000);
-  this->pressCount = 0;   // this->savedBlock max == 7
 
-  Serial.print("c: ");
+  Serial.print("savedBlock: ");
   Serial.println(this->savedBlock);
-  Serial.print("d: ");
+  Serial.print("pressCount: ");
   Serial.println(this->pressCount);
   if (this->savedBlock == 1)
   {
@@ -231,11 +226,12 @@ void DecodeIP::actOnHigh()
     digitalWrite(this->pin[1], LOW);
     digitalWrite(this->pin[2], LOW);
   }
+  if (this->savedBlock > 6)
+  {
+      this->savedBlock = 6;
+  }
   if (this->savedBlock == 6)
   {
-    // this->renewValue will be returned false after releasing the button
-    this->renewValue = true;
-
     for (uint8_t i = 0; i < this->savedBlock; i++)
     {
       //this->flashPin(this->pin[2], 100);
@@ -244,45 +240,39 @@ void DecodeIP::actOnHigh()
       //this->flashPin(this->pin[3], 100);
     }
   }
-  Serial.print("a: ");
-  if (this->savedBlock > 6)
-  {
-    this->savedBlock = 6;
-    this->buttonPressTime = 0;  // pretend the button is pressed long enough to act a renew
-  }
-  Serial.print("b: ");
-  Serial.println(this->savedBlock);
 }
 
 void DecodeIP::actOnLow()
 {
   if ((this->savedBlock >= 1) && (this->savedBlock <= 4))
   {
-    this->pressCount = 0;
-  }
-
-
-  if (this->pressCount == 0)
-  {
-    this->flashBlock(this->savedBlock);  // show which block is being read
-  }
-
-  if (this->maxShowTime < this->MAXSHOW)
-  {
-    if (this->pressCount > 3)
+    if (this->pressCount == 0)
     {
-      this->pressCount = 1;
-      for (uint8_t i = 0; i < 3; i++)
-      {
-        //this->flashPin(this->pin[3], 100);
-        //this->flashPin(this->pin[0], 100);
-        //this->flashPin(this->pin[1], 100);
-        //this->flashPin(this->pin[2], 100);
-      }
-      this->maxShowTime = this->MAXSHOW;  // soft break
+      this->flashBlock(this->savedBlock);  // show which block is being read
     }
-    this->flashResult(this->savedBlock, this->pressCount);
-    this->maxShowTime++;
+
+    if (this->maxShowTime < this->MAXSHOW)
+    {
+      if (this->pressCount > 3)
+      {
+        this->pressCount = 1;
+        for (uint8_t i = 0; i < 3; i++)
+        {
+          //this->flashPin(this->pin[3], 100);
+          //this->flashPin(this->pin[0], 100);
+          //this->flashPin(this->pin[1], 100);
+          //this->flashPin(this->pin[2], 100);
+        }
+        this->maxShowTime = this->MAXSHOW;  // soft break
+      }
+      this->flashResult(this->savedBlock, this->pressCount);
+      this->maxShowTime++;
+    }
+  }
+  if (this->savedBlock == 6)
+  {    
+    // this->renewValue will be returned false after releasing the button
+    this->renewValue = true;
   }
 }
 
