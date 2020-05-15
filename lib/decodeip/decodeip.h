@@ -13,15 +13,17 @@ private:
     const uint8_t MAXSHOW = 10;
     uint8_t maxShowTime = MAXSHOW;
 
-    /* count the number of button-presses within a choosen IP-block */
-    uint8_t pressCount = 0;
-
+    /* (1, 2 or 3) count the number of button-presses within a choosen IP-block */
+    uint8_t numberPosition = 0;
 
     /* remember which block in turn */
-    uint8_t savedBlock = 0;
+    uint8_t savedBlock = 1;
 
-    /* if a block is selected then allowShowResult = true */
-    bool allowShowResult = false;
+    /* true if a block selection is underway */
+    bool allowBlockSelection = false;
+
+    /* true if a number selection within a block selection is underway */
+    bool allowNumberSelection = false;
 
     /* 
     pin[0], pin[1], pin[2] are result pins
@@ -31,9 +33,6 @@ private:
 
     /* button to take action on */
     uint8_t pinButton;
-
-    /* time elapsed since buttonPress */
-    uint32_t buttonPressTime;
 
     /* after 6 seconds a renew is true */
     bool renewValue = false; 
@@ -64,8 +63,11 @@ private:
     /* does the response on the acknowledge/result pins */
     void flashResult(uint8_t block, uint8_t numberPosition);
 
-    /* do actions needed when pinButton == HIGH */
-    void actOnHigh();
+    /* do actions needed when pinButton == HIGH for a second or longer */
+    void actOnHighLong(uint8_t pushDuration);
+
+    /* do actions needed when pinButton == HIGH for less than a second */
+    void actOnHighShort(uint8_t numberPosition);
 
     /* do actions needed when pinButton == LOW */
     void actOnLow();
@@ -96,7 +98,7 @@ public:
 
     /* loop of this class */
     /* if true the device should reset to Access Point with default IP address */
-    void loop(String ip4, uint32_t buttonPressTime);
+    void loop(String ip4, uint8_t numberPosition, uint8_t pushDuration);
 
     /* number of pins flashing/on to show which block is used */
     void flashBlock(uint8_t block);

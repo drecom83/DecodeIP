@@ -26,10 +26,7 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
     Serial.print(block);
     Serial.print(" en IP-positie: ");
     Serial.println(numberPosition);
-    if (block > 0) {
-      block--;   // index starts at 0
-    }
-    if (block < 4)   // four blocks (0,1,2,3)
+    if ((block >= 0) && (block < 4))   // four blocks (0,1,2,3)
     {
       // show which block, first attention by flash them all
 
@@ -37,32 +34,32 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
       //for (uint8_t powerTen = 2; powerTen >= 0; powerTen--)
       uint8_t powerTen = 3 - numberPosition;
       //{
-      bool ready = false;
       uint8_t row = 0;
-      while (! ready)
+      /*
+      for (uint8_t p = 0; p < numberPosition; p++)
       {
-          this->delayInMillis(250);
-          for (uint8_t col = 0; col < 3; col++)
+        if (this->acknowledge[block][powerTen][row] == 1)
+        {
+          digitalWrite(this->pin[3], HIGH);
+        }
+        this->delayInMillis(250);
+        for (uint8_t col = 0; col < 3; col++)
+        {
+          if (this->result[block][powerTen][row][col] == 1)
           {
-              if (this->result[block][powerTen][row][col] == 1)
-              {
-                  digitalWrite(this->pin[col], HIGH);
-                  if (this->acknowledge[block][powerTen][row] == 1)
-                  {
-                      digitalWrite(this->pin[3], HIGH);
-                      ready = true; // soft break;
-                  }
-                  this->delayInMillis(250);
-                  //digitalWrite(this->pin[col], LOW);
-              }
-              digitalWrite(this->pin[0], LOW);
-              digitalWrite(this->pin[1], LOW);
-              digitalWrite(this->pin[2], LOW);
-              digitalWrite(this->pin[3], LOW);
-              this->delayInMillis(250);
+            digitalWrite(this->pin[col], HIGH);
+            this->delayInMillis(250);
+            //digitalWrite(this->pin[col], LOW);
           }
-          row++;
+          digitalWrite(this->pin[0], LOW);
+          digitalWrite(this->pin[1], LOW);
+          digitalWrite(this->pin[2], LOW);
+          digitalWrite(this->pin[3], LOW);
+          this->delayInMillis(250);
+        }
+        row++;
       }
+      */
     }
     Serial.println("end flashResult");
 }
@@ -178,19 +175,27 @@ void DecodeIP::process(String ip4)
     }
 }
 
-void DecodeIP::loop(String ip4, uint32_t buttonPressTime)
+void DecodeIP::loop(String ip4, uint8_t numberPosition, uint8_t pushDuration)
 {
-  this->buttonPressTime = buttonPressTime;
 
   if (this->ip4 != ip4) {
     // refreshed ip
     this->ip4 = ip4;
-    this->pressCount = 0;
+    this->renewValue = false;
+    this->savedBlock = 0;
     this->process(this->ip4);
   }
   if (digitalRead(this->pinButton) == HIGH)
   {
-    this->actOnHigh();
+    if (pushDuration > 0)
+    {
+      this->actOnHighLong(pushDuration);  // 1 second or longer
+    }
+    else
+    {
+      this->actOnHighShort(numberPosition);  // less than 1 second
+    }
+    
   }
   else
   {
@@ -198,24 +203,19 @@ void DecodeIP::loop(String ip4, uint32_t buttonPressTime)
   }
 }
 
-void DecodeIP::actOnHigh()
+void DecodeIP::actOnHighLong(uint8_t pushDuration)
 {
-  uint8_t block = int(this->buttonPressTime / 1000);
-  this->allowShowResult = true;
-  if (block > 0)
+  this->savedBlock = pushDuration;
+  this->numberPosition = 0;  // set to default position where nothing happens
+  if (this->savedBlock > 6) 
   {
-    this->savedBlock = block;
-    this->allowShowResult = false;
+    this->savedBlock = 6;
   }
-  //Serial.print("savedBlock: ");
-  //Serial.println(this->savedBlock);
-  //Serial.print("pressCount: ");
-  //Serial.println(this->pressCount);
   if (this->savedBlock == 1)
   {
     digitalWrite(this->pin[3], HIGH);
-    this->pressCount = 0; 
     this->maxShowTime = 0;
+    this->renewValue = false;
   }
   if (this->savedBlock == 2)
   {
@@ -231,62 +231,57 @@ void DecodeIP::actOnHigh()
   }
   if (this->savedBlock == 5)
   {
-    digitalWrite(this->pin[1], LOW);
     digitalWrite(this->pin[2], LOW);
-  }
-  if (this->savedBlock > 6)
-  {
-      this->savedBlock = 6;
+    digitalWrite(this->pin[3], LOW);
   }
   if (this->savedBlock == 6)
   {
+    this->renewValue = true;
     for (uint8_t i = 0; i < this->savedBlock; i++)
     {
-      //this->flashPin(this->pin[2], 100);
-      //this->flashPin(this->pin[1], 100);
-      //this->flashPin(this->pin[0], 100);
-      //this->flashPin(this->pin[3], 100);
+      this->flashPin(this->pin[2], 100);
+      this->flashPin(this->pin[1], 100);
+      this->flashPin(this->pin[0], 100);
+      this->flashPin(this->pin[3], 100);
     }
+  }
+}
+
+void DecodeIP::actOnHighShort(uint8_t numberPosition)
+{
+  if (numberPosition != this->numberPosition)
+  {
+    this->flashPin(this->pin[2], 10);
+    this->flashPin(this->pin[1], 10);
+    this->flashPin(this->pin[0], 10);
+    this->flashPin(this->pin[3], 10);
+    this->numberPosition = numberPosition;
   }
 }
 
 void DecodeIP::actOnLow()
 {
-  if ((this->savedBlock >= 1) && (this->savedBlock <= 4))
+  if ((this->savedBlock >= 1) && (this->savedBlock <= 4) && (this->numberPosition == 0))
   {
-    if (this->pressCount == 0)
-    {
-      this->flashBlock(this->savedBlock);  // show which block is being read
-    }
+    this->flashBlock(this->savedBlock);  // show which block is being read
   }
-  if (this->savedBlock == 0)
+  if ((this->savedBlock >= 1) && (this->savedBlock <= 4) && (this->numberPosition > 0))
   {
-    this->pressCount++;
-  }
-  if (this->allowShowResult == true)
-  {
+    this->maxShowTime = 0;  // each number gets equal max showtime
     if (this->maxShowTime < this->MAXSHOW)
     {
-      if (this->pressCount > 3)
+      for (uint8_t i = 0; i < 3; i++)
       {
-        this->pressCount = 1;
-        for (uint8_t i = 0; i < 3; i++)
-        {
-          //this->flashPin(this->pin[3], 100);
-          //this->flashPin(this->pin[0], 100);
-          //this->flashPin(this->pin[1], 100);
-          //this->flashPin(this->pin[2], 100);
-        }
-        this->maxShowTime = this->MAXSHOW;  // soft break
+        //this->flashPin(this->pin[3], 100);
+        //this->flashPin(this->pin[0], 100);
+        //this->flashPin(this->pin[1], 100);
+        //this->flashPin(this->pin[2], 100);
       }
-      this->flashResult(this->savedBlock, this->pressCount);
-      this->maxShowTime++;
+      uint8_t block = this->savedBlock - 1;
+      this->flashResult(block, this->numberPosition);
+      this->maxShowTime = this->MAXSHOW;  // soft break
     }
-  }
-  if (this->savedBlock == 6)
-  {    
-    // this->renewValue will be returned false after releasing the button
-    this->renewValue = true;
+    this->maxShowTime++;
   }
 }
 

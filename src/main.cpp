@@ -16,14 +16,17 @@ String ip4 = "192.168.004.001";
 bool resetIP = false;
 
 /* count the number of button-presses within a choosen IP-block */
-volatile uint8_t pressCount = 0;
+volatile uint8_t numberPosition = 0;  // pushe last less than a second
+
+/* number of seconds the button was pushed */
+volatile uint8_t pushDuration = 0;
 
 /* holds the time in millis between button-press and button-release */
-uint32_t buttonPressTime = 0;
+volatile uint32_t buttonPressTime = 0;
 
 /* time that the button was pressed, in milis since esp8266 was powered */
 /* TODO: act on overload */
-volatile uint32_t pressTime;
+volatile uint32_t pressTime = millis();
 
 
 DecodeIP * decodeIP = new DecodeIP(IP_ACK, IP_PIN0, IP_PIN1, IP_PIN2, IP_BUTTON);
@@ -44,7 +47,7 @@ void delayInMillis(uint8_t ms) {
 
 void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
   // this function is called after a change of pressed button  
-  buttonInterruptOff();  // to prevent exception
+  //buttonInterruptOff();  // to prevent exception
 
   delayInMillis(10);      // prevent bounce
   
@@ -57,12 +60,13 @@ void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
   {
     pressTime = millis();           // start of pressing the button
     buttonPressTime = millis() - pressTime;  // get buttonPressTime in main loop too
+    pushDuration = int(buttonPressTime / 1000);
   }
   //else
   //{
     //buttonPressTime = millis() - pressTime;
   //}
-  buttonInterruptOn();  // to prevent exception
+  //buttonInterruptOn();  // to prevent exception
 }
 
 void buttonInterruptOn() {
@@ -103,9 +107,21 @@ void setup()
 
 void loop()
 {
-  buttonPressTime = millis() - pressTime;
-
-  decodeIP->loop(ip4, buttonPressTime);
+  buttonPressTime = millis() - pressTime;  // get buttonPressTime in main loop too
+  pushDuration = int(buttonPressTime / 1000);
+  if (pushDuration < 1)
+  {
+    numberPosition += 1;
+    if (numberPosition > 3)
+    {
+      numberPosition = 1;
+    }
+  }
+  else
+  {
+    numberPosition = 0; // means checkIP block, if > 0 then means numberposition within IP block
+  }
+  decodeIP->loop(ip4, numberPosition, pushDuration);
 
   resetIP = decodeIP->getRenewValue();
   if (resetIP == true)
@@ -113,4 +129,5 @@ void loop()
     Serial.println("reset should happen here");
     resetIP = false;
   }
+  delay(100);
 }
