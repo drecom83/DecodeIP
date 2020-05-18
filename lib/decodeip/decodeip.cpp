@@ -35,31 +35,69 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
       uint8_t powerTen = 3 - numberPosition;
       //{
       uint8_t row = 0;
-      /*
-      for (uint8_t p = 0; p < numberPosition; p++)
+      
+      bool acknowledgeFlag = false;
+      bool exitLoop = false;
+      do
       {
+        uint8_t acknowledgeFlagCounter = 0;  // maximum of 3
+          Serial.print(row);
+          Serial.println(" <");
         if (this->acknowledge[block][powerTen][row] == 1)
         {
           digitalWrite(this->pin[3], HIGH);
+          acknowledgeFlag = true;
+          acknowledgeFlagCounter += 1;
         }
-        this->delayInMillis(250);
+        //this->delayInMillis(250);
         for (uint8_t col = 0; col < 3; col++)
         {
-          if (this->result[block][powerTen][row][col] == 1)
+          if (! exitLoop)
           {
-            digitalWrite(this->pin[col], HIGH);
+            Serial.print("block - powerTen - row - col: ");
+            Serial.print(block);
+            Serial.print(" - ");
+            Serial.print(powerTen);
+            Serial.print(" - ");
+            Serial.print(row);
+            Serial.print(" - ");
+            Serial.println(col);
+
+            if (this->result[block][powerTen][row][col] == 1)
+            {
+              digitalWrite(this->pin[col], HIGH);
+              this->delayInMillis(250);
+              //digitalWrite(this->pin[col], LOW);
+            }
+            digitalWrite(this->pin[0], LOW);
+            digitalWrite(this->pin[1], LOW);
+            digitalWrite(this->pin[2], LOW);
+            digitalWrite(this->pin[3], LOW);
             this->delayInMillis(250);
-            //digitalWrite(this->pin[col], LOW);
+
+            if (acknowledgeFlag == true)
+            {
+              if ((acknowledgeFlagCounter == 1) && (row == 3))
+              {
+                exitLoop = true;
+              }
+              if (! exitLoop)
+              {
+                if ((acknowledgeFlagCounter == 1 ) && (this->result[block][powerTen][row][col] == 0))
+                {
+                  exitLoop = true;
+                }
+              }
+            }
+            row++;
+            Serial.print(row);
+            Serial.println(" <<");
           }
-          digitalWrite(this->pin[0], LOW);
-          digitalWrite(this->pin[1], LOW);
-          digitalWrite(this->pin[2], LOW);
-          digitalWrite(this->pin[3], LOW);
-          this->delayInMillis(250);
         }
-        row++;
+        
       }
-      */
+      while (! exitLoop);
+      
     }
     Serial.println("end flashResult");
 }
@@ -175,9 +213,8 @@ void DecodeIP::process(String ip4)
     }
 }
 
-void DecodeIP::loop(String ip4, uint8_t numberPosition, uint8_t pushDuration)
+void DecodeIP::loop(String ip4, uint8_t pushDuration, bool buttonInterruptFlag)
 {
-
   if (this->ip4 != ip4) {
     // refreshed ip
     this->ip4 = ip4;
@@ -190,15 +227,25 @@ void DecodeIP::loop(String ip4, uint8_t numberPosition, uint8_t pushDuration)
     if (pushDuration > 0)
     {
       this->actOnHighLong(pushDuration);  // 1 second or longer
+      this->numberPosition = 0;           // reset to 0
     }
     else
     {
-      this->actOnHighShort(numberPosition);  // less than 1 second
+      this->actOnHighShort();  // less than 1 second
     }
     
   }
-  else
+  if (digitalRead(this->pinButton) == LOW)
   {
+    if ((pushDuration == 0) && (buttonInterruptFlag == true))
+    {
+      // means checkIP block, if > 0 then means numberposition within IP block
+      this->numberPosition += 1;
+      if (this->numberPosition > 3)
+      {
+        this->numberPosition = 1;
+      }
+    }
     this->actOnLow();
   }
 }
@@ -247,16 +294,12 @@ void DecodeIP::actOnHighLong(uint8_t pushDuration)
   }
 }
 
-void DecodeIP::actOnHighShort(uint8_t numberPosition)
+void DecodeIP::actOnHighShort()
 {
-  if (numberPosition != this->numberPosition)
-  {
-    this->flashPin(this->pin[2], 10);
-    this->flashPin(this->pin[1], 10);
-    this->flashPin(this->pin[0], 10);
-    this->flashPin(this->pin[3], 10);
-    this->numberPosition = numberPosition;
-  }
+  //this->flashPin(this->pin[2], 10);
+  //this->flashPin(this->pin[1], 10);
+  //this->flashPin(this->pin[0], 10);
+  //this->flashPin(this->pin[3], 10);
 }
 
 void DecodeIP::actOnLow()

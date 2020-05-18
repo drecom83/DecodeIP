@@ -67,7 +67,7 @@ private:
     void actOnHighLong(uint8_t pushDuration);
 
     /* do actions needed when pinButton == HIGH for less than a second */
-    void actOnHighShort(uint8_t numberPosition);
+    void actOnHighShort();
 
     /* do actions needed when pinButton == LOW */
     void actOnLow();
@@ -98,7 +98,7 @@ public:
 
     /* loop of this class */
     /* if true the device should reset to Access Point with default IP address */
-    void loop(String ip4, uint8_t numberPosition, uint8_t pushDuration);
+    void loop(String ip4, uint8_t pushDuration, bool buttonInterruptFlag);
 
     /* number of pins flashing/on to show which block is used */
     void flashBlock(uint8_t block);

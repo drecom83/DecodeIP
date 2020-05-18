@@ -15,8 +15,8 @@ const uint8_t IP_BUTTON = D7;
 String ip4 = "192.168.004.001";
 bool resetIP = false;
 
-/* count the number of button-presses within a choosen IP-block */
-volatile uint8_t numberPosition = 0;  // pushe last less than a second
+/* flag on buttonInterrupt */
+volatile bool buttonInterruptFlag = false;
 
 /* number of seconds the button was pushed */
 volatile uint8_t pushDuration = 0;
@@ -47,7 +47,7 @@ void delayInMillis(uint8_t ms) {
 
 void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
   // this function is called after a change of pressed button  
-  //buttonInterruptOff();  // to prevent exception
+  buttonInterruptOff();  // to prevent exception
 
   delayInMillis(10);      // prevent bounce
   
@@ -56,17 +56,15 @@ void ICACHE_RAM_ATTR detectButton() {  // ICACHE_RAM_ATTR is voor interrupts
   digitalWrite(IP_PIN1, LOW);
   digitalWrite(IP_PIN2, LOW);
 
+  buttonInterruptFlag = true;
   if (digitalRead(IP_BUTTON) == HIGH)
   {
     pressTime = millis();           // start of pressing the button
-    buttonPressTime = millis() - pressTime;  // get buttonPressTime in main loop too
-    pushDuration = int(buttonPressTime / 1000);
   }
-  //else
-  //{
-    //buttonPressTime = millis() - pressTime;
-  //}
-  //buttonInterruptOn();  // to prevent exception
+  buttonPressTime = millis() - pressTime;  // get buttonPressTime in main loop too
+  pushDuration = int(buttonPressTime / 1000);
+
+  buttonInterruptOn();  // to prevent exception
 }
 
 void buttonInterruptOn() {
@@ -109,19 +107,9 @@ void loop()
 {
   buttonPressTime = millis() - pressTime;  // get buttonPressTime in main loop too
   pushDuration = int(buttonPressTime / 1000);
-  if (pushDuration < 1)
-  {
-    numberPosition += 1;
-    if (numberPosition > 3)
-    {
-      numberPosition = 1;
-    }
-  }
-  else
-  {
-    numberPosition = 0; // means checkIP block, if > 0 then means numberposition within IP block
-  }
-  decodeIP->loop(ip4, numberPosition, pushDuration);
+
+  decodeIP->loop(ip4, pushDuration, buttonInterruptFlag);
+  buttonInterruptFlag = false;
 
   resetIP = decodeIP->getRenewValue();
   if (resetIP == true)
