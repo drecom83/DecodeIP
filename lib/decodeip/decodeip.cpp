@@ -36,25 +36,17 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
       //{
       uint8_t row = 0;
       
-      bool acknowledgeFlag = false;
       bool exitLoop = false;
       do
       {
-        uint8_t acknowledgeFlagCounter = 0;  // maximum of 3
-          Serial.print(row);
-          Serial.println(" <");
-        if (this->acknowledge[block][powerTen][row] == 1)
-        {
-          digitalWrite(this->pin[3], HIGH);
-          acknowledgeFlag = true;
-          acknowledgeFlagCounter += 1;
-        }
         //this->delayInMillis(250);
         for (uint8_t col = 0; col < 3; col++)
         {
           if (! exitLoop)
           {
-            Serial.print("block - powerTen - row - col: ");
+            Serial.print("ip - block - powerTen - row - col: ");
+            Serial.print(this->ip4);
+            Serial.print(" - ");
             Serial.print(block);
             Serial.print(" - ");
             Serial.print(powerTen);
@@ -63,36 +55,32 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
             Serial.print(" - ");
             Serial.println(col);
 
+            if (this->acknowledge[block][powerTen][row][col] == 1)
+            {
+              digitalWrite(this->pin[3], HIGH);
+              exitLoop = true;
+            }
             if (this->result[block][powerTen][row][col] == 1)
             {
               digitalWrite(this->pin[col], HIGH);
-              this->delayInMillis(250);
               //digitalWrite(this->pin[col], LOW);
             }
+            this->delayInMillis(200);
+
             digitalWrite(this->pin[0], LOW);
             digitalWrite(this->pin[1], LOW);
             digitalWrite(this->pin[2], LOW);
             digitalWrite(this->pin[3], LOW);
-            this->delayInMillis(250);
+            this->delayInMillis(200);
 
-            if (acknowledgeFlag == true)
-            {
-              if ((acknowledgeFlagCounter == 1) && (row == 3))
-              {
-                exitLoop = true;
-              }
-              if (! exitLoop)
-              {
-                if ((acknowledgeFlagCounter == 1 ) && (this->result[block][powerTen][row][col] == 0))
-                {
-                  exitLoop = true;
-                }
-              }
-            }
-            row++;
-            Serial.print(row);
-            Serial.println(" <<");
           }
+        }
+        row++;
+        Serial.print(row);
+        Serial.println(" <<");
+        if (row > 4)
+        {
+          exitLoop = true;
         }
         
       }
@@ -113,8 +101,8 @@ void DecodeIP::setResultZero()
                 for (uint8_t col = 0; col < 3; col++)
                 {
                     this->result[block][tenPower][row][col] = 0;
+                    this->acknowledge[block][tenPower][row][col] = 0;
                 }
-                this->acknowledge[block][tenPower][row] = 0;
             }
         }
     }
@@ -127,10 +115,12 @@ void DecodeIP::setResult(uint8_t block, uint8_t value)
     if (value > 99)
     {
         uint8_t hundreds = int8_t(value / 100);
+        this->acknowledge[block][tenPower][0][hundreds - 1] = 1;
+
         for (uint8_t pos = 0; pos < hundreds; pos++)
         {
             this->result[block][tenPower][0][pos] = 1;
-            this->acknowledge[block][tenPower][0] = 1;
+            //this->acknowledge[block][tenPower][0][pos] = 1;
         }
         value -= hundreds * 100;
     }
@@ -138,13 +128,18 @@ void DecodeIP::setResult(uint8_t block, uint8_t value)
     {
         /* tens value is zero: set nost left value to one */ 
         this->result[block][tenPower][0][2] = 1;
-        this->acknowledge[block][tenPower][0] = 1;
+        this->acknowledge[block][tenPower][0][2] = 1;
     }
     
     tenPower = 1;
     if (value > 9)
     {
         uint8_t tens = int8_t(value / 10);
+
+        uint8_t ackCol = (tens - 1) % 3;
+        uint8_t ackRow = uint8_t((tens - 1) / 3);
+        this->acknowledge[block][tenPower][ackRow][ackCol] = 1;
+
         for (uint8_t pos = 0; pos < tens; pos++)
         {
             uint8_t col = pos % 3;
@@ -152,7 +147,7 @@ void DecodeIP::setResult(uint8_t block, uint8_t value)
             this->result[block][tenPower][row][col] = 1;
             if (tens - pos == 1)
             {
-                this->acknowledge[block][tenPower][row] = 1;
+                //this->acknowledge[block][tenPower][row] = 1;
             }
         }
         value -= tens * 10;
@@ -161,13 +156,18 @@ void DecodeIP::setResult(uint8_t block, uint8_t value)
     {
         /* tens value is zero: set most left value to one */ 
         this->result[block][tenPower][0][2] = 1;
-        this->acknowledge[block][tenPower][0] = 1;
+        this->acknowledge[block][tenPower][0][2] = 1;
     }
 
     // now for the least significant number
     tenPower = 0;
     if (value >  0)
     {
+
+        uint8_t ackCol = (value - 1) % 3;
+        uint8_t ackRow = uint8_t((value - 1) / 3);
+        this->acknowledge[block][tenPower][ackRow][ackCol] = 1;
+
         for (uint8_t pos = 0; pos < value; pos++)
         {
             uint8_t col = pos % 3;
@@ -175,7 +175,7 @@ void DecodeIP::setResult(uint8_t block, uint8_t value)
             this->result[block][tenPower][row][col] = 1;
             if (value - pos == 1)
             {
-                this->acknowledge[block][tenPower][row] = 1;
+                //this->acknowledge[block][tenPower][row] = 1;
             }
         }
     }
@@ -183,7 +183,7 @@ void DecodeIP::setResult(uint8_t block, uint8_t value)
     {
         /* tens value is zero: set most left value to one */ 
         this->result[block][tenPower][0][2] = 1;
-        this->acknowledge[block][tenPower][0] = 1;
+        this->acknowledge[block][tenPower][0][2] = 1;
     }
 }
 
@@ -241,9 +241,10 @@ void DecodeIP::loop(String ip4, uint8_t pushDuration, bool buttonInterruptFlag)
     {
       // means checkIP block, if > 0 then means numberposition within IP block
       this->numberPosition += 1;
+      this->maxShowTime = 0;
       if (this->numberPosition > 3)
       {
-        this->numberPosition = 1;
+        this->numberPosition = 0;   // act only on 1, 2, 3
       }
     }
     this->actOnLow();
@@ -299,7 +300,7 @@ void DecodeIP::actOnHighShort()
   //this->flashPin(this->pin[2], 10);
   //this->flashPin(this->pin[1], 10);
   //this->flashPin(this->pin[0], 10);
-  //this->flashPin(this->pin[3], 10);
+  this->flashPin(this->pin[3], 10);
 }
 
 void DecodeIP::actOnLow()
@@ -310,19 +311,19 @@ void DecodeIP::actOnLow()
   }
   if ((this->savedBlock >= 1) && (this->savedBlock <= 4) && (this->numberPosition > 0))
   {
-    this->maxShowTime = 0;  // each number gets equal max showtime
+    //this->maxShowTime = 0;  // each number gets equal max showtime
     if (this->maxShowTime < this->MAXSHOW)
     {
-      for (uint8_t i = 0; i < 3; i++)
-      {
+    //  for (uint8_t i = 0; i < 3; i++)
+    //  {
         //this->flashPin(this->pin[3], 100);
         //this->flashPin(this->pin[0], 100);
         //this->flashPin(this->pin[1], 100);
         //this->flashPin(this->pin[2], 100);
-      }
+    //  }
       uint8_t block = this->savedBlock - 1;
       this->flashResult(block, this->numberPosition);
-      this->maxShowTime = this->MAXSHOW;  // soft break
+      //this->maxShowTime = this->MAXSHOW;  // soft break
     }
     this->maxShowTime++;
   }

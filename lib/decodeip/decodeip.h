@@ -51,8 +51,8 @@ private:
     */
     uint8_t result[4][3][3][3];
 
-    /* acknowledge pin should have a value when the last result-row is given */
-    uint8_t acknowledge[4][3][3];
+    /* acknowledge pin should have a value when the last result(row) is given */
+    uint8_t acknowledge[4][3][3][3];
 
     /* set all values of result and acknowledge to zero */
     void setResultZero();
