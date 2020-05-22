@@ -35,12 +35,12 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
       uint8_t powerTen = 3 - numberPosition;
       //{
       uint8_t row = 0;
-      
+      uint8_t col = 0;
       bool exitLoop = false;
       do
       {
         //this->delayInMillis(250);
-        for (uint8_t col = 0; col < 3; col++)
+        do
         {
           if (! exitLoop)
           {
@@ -74,15 +74,14 @@ void DecodeIP::flashResult(uint8_t block, uint8_t numberPosition)
             this->delayInMillis(200);
 
           }
+          col++;
+          if (col > 3)
+          {
+            col = 0;
+          }
         }
-        row++;
-        Serial.print(row);
-        Serial.println(" <<");
-        if (row > 4)
-        {
-          exitLoop = true;
-        }
-        
+        while (! exitLoop);
+        row++;      
       }
       while (! exitLoop);
       
@@ -297,10 +296,25 @@ void DecodeIP::actOnHighLong(uint8_t pushDuration)
 
 void DecodeIP::actOnHighShort()
 {
-  //this->flashPin(this->pin[2], 10);
-  //this->flashPin(this->pin[1], 10);
-  //this->flashPin(this->pin[0], 10);
-  this->flashPin(this->pin[3], 10);
+  // this-> number will be updated after a button-LOW, so here we think one step ahead
+  // this->numberPosition = 0 means this-> numberposition = 1 after button == LOW
+  //if (this->numberPosition == 0)
+  //{
+  //  this->flashPin(this->pin[3], 10);
+  //}
+
+  if (this->numberPosition == 0)
+  {
+    this->flashPin(this->pin[0], 10);
+  }
+  if (this->numberPosition == 1)
+  {
+    this->flashPin(this->pin[1], 10);
+  }
+  if (this->numberPosition == 2)
+  {
+    this->flashPin(this->pin[2], 10);
+  }
 }
 
 void DecodeIP::actOnLow()
@@ -326,6 +340,10 @@ void DecodeIP::actOnLow()
       //this->maxShowTime = this->MAXSHOW;  // soft break
     }
     this->maxShowTime++;
+    if (this->maxShowTime > this->MAXSHOW)
+    {
+      this->maxShowTime--;    // prevent over
+    }
   }
 }
 

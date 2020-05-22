@@ -110,6 +110,7 @@ void loop()
 
   decodeIP->loop(ip4, pushDuration, buttonInterruptFlag);
   buttonInterruptFlag = false;
+  delayInMillis(10);      // short pause
 
   resetIP = decodeIP->getRenewValue();
   if (resetIP == true)
@@ -117,5 +118,5 @@ void loop()
     Serial.println("reset should happen here");
     resetIP = false;
   }
-  delay(100);
+  delayInMillis(50);
 }

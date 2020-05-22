@@ -10,7 +10,7 @@ class DecodeIP
 {
 private:
     /* paramer for showBlock */
-    const uint8_t MAXSHOW = 10;
+    const uint8_t MAXSHOW = 3;
     uint8_t maxShowTime = MAXSHOW;
 
     /* (1, 2 or 3) count the number of button-presses within a choosen IP-block */
